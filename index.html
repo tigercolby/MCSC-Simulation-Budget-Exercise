@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MSCS Teacher Retention Challenge</title>
+<style>
+:root { color-scheme: light; --ink:#18212f; --muted:#5e6878; --line:#d9dee7; --panel:#f5f7fa; --accent:#2457a7; --warn:#a83a32; }
+* { box-sizing:border-box; }
+body { margin:0; font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:#eef1f6; }
+main { max-width:850px; margin:32px auto; padding:0 16px 32px; }
+.card { background:white; border:1px solid var(--line); border-radius:16px; padding:clamp(18px,4vw,30px); box-shadow:0 8px 28px #15223b0b; }
+.kicker { text-transform:uppercase; letter-spacing:.09em; font-size:.78rem; color:var(--accent); font-weight:750; }
+h1 { line-height:1.15; margin:.3rem 0 .7rem; font-size:clamp(1.7rem,4vw,2.4rem); }
+.intro { color:var(--muted); margin-top:0; }
+.totalbox { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:var(--panel); border-radius:12px; padding:15px 17px; margin:22px 0; }
+.totalbox strong { font-size:1.55rem; font-variant-numeric:tabular-nums; }
+.status { font-weight:700; color:var(--accent); }
+.status.over { color:var(--warn); }
+.item { border-top:1px solid var(--line); padding:18px 0; }
+.itemhead { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.item h2 { font-size:1.02rem; line-height:1.3; margin:0 0 4px; }
+.item p { margin:0; color:var(--muted); font-size:.9rem; }
+.amount { white-space:nowrap; font-weight:750; font-variant-numeric:tabular-nums; }
+input[type=range] { width:100%; accent-color:var(--accent); margin:15px 0 4px; cursor:pointer; }
+.limits { display:flex; justify-content:space-between; color:var(--muted); font-size:.8rem; }
+button { font:inherit; font-weight:650; border:1px solid var(--line); border-radius:9px; padding:10px 15px; background:white; color:var(--ink); cursor:pointer; }
+button:hover { background:var(--panel); }
+.actions { display:flex; gap:10px; flex-wrap:wrap; margin:20px 0 4px; }
+button.primary { color:white; background:var(--accent); border-color:var(--accent); }
+button.primary:hover { filter:brightness(.93); }
+.note { font-size:.84rem; color:var(--muted); }
+h3 { margin:26px 0 8px; }
+ol { padding-left:1.3rem; }
+li { margin:.4rem 0; }
+footer { text-align:center; color:var(--muted); font-size:.8rem; margin-top:14px; }
+@media print { body { background:white; } main { margin:0 auto; } .card { box-shadow:none; } button { display:none; } }
+</style>
+</head>
+<body>
+<main>
+<section class="card">
+<div class="kicker">Educational Psychology · Decision-making activity</div>
+<h1>MSCS Teacher Retention Challenge</h1>
+<p class="intro">You are a consulting team hired by Memphis-Shelby County Schools (MSCS) to reduce teacher turnover. Allocate a hypothetical <strong>$1,000,000</strong> across possible interventions. Use the sliders to build a plan and discuss why you chose it.</p>
+<div class="totalbox" aria-live="polite">
+  <div><div class="note">Your total allocation</div><strong id="total">$0</strong></div>
+  <div style="text-align:right"><div class="note">Budget remaining</div><strong id="remaining">$1,000,000</strong></div>
+  <div id="status" class="status">Within budget</div>
+</div>
+<div id="items"></div>
+<div class="actions">
+<button class="primary" id="reset">Reset allocations</button>
+<button id="equal">Split budget evenly</button>
+<button id="summary">Copy my allocation</button>
+</div>
+<p class="note" id="message" role="status"></p>
+<h3>Team discussion</h3>
+<ol>
+<li>Which intervention addresses a likely cause of turnover rather than a symptom?</li>
+<li>How do motivation, reinforcement, autonomy, competence, and relatedness help explain your choices?</li>
+<li>What is one reason your plan might fail?</li>
+<li>What data would you collect after one year to determine whether it worked?</li>
+<li>Would reducing teacher turnover necessarily improve student learning? Why or why not?</li>
+</ol>
+<p class="note"><strong>Important:</strong> These are illustrative allocations and cost ceilings for classroom discussion, not actual MSCS cost estimates. The exercise does not assume that any single intervention is proven to reduce turnover.</p>
+</section>
+<footer>Built for classroom discussion · No data is saved or sent anywhere.</footer>
+</main>
+<script>
+const interventions = [
+ {name:"Higher salaries or retention bonuses", max:500000, desc:"Improve compensation and reward teachers for staying."},
+ {name:"Classroom resources and building repairs", max:300000, desc:"Address supply shortages and basic working conditions."},
+ {name:"Principal training and accountability", max:250000, desc:"Improve leadership, communication, and responsiveness."},
+ {name:"Mentoring and student behavior support", max:200000, desc:"Coach new teachers and strengthen classroom support."},
+ {name:"Teacher voice and shared decision-making", max:100000, desc:"Give teachers meaningful channels for feedback and influence."},
+ {name:"Smaller classes or additional staff", max:400000, desc:"Reduce workload and increase instructional support."}
+];
+const values = interventions.map(() => 0);
+const fmt = n => n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+const root = document.getElementById("items");
+interventions.forEach((x,i) => {
+ const row = document.createElement("section"); row.className="item";
+ row.innerHTML = `<div class="itemhead"><div><h2>${x.name}</h2><p>${x.desc}</p></div><div class="amount" id="amount${i}">$0</div></div>
+ <input aria-label="${x.name} allocation" id="slider${i}" type="range" min="0" max="${x.max}" step="25000" value="0">
+ <div class="limits"><span>$0</span><span>Maximum ${fmt(x.max)}</span></div>`;
+ root.appendChild(row);
+ row.querySelector("input").addEventListener("input", e => { values[i]=Number(e.target.value); update(); });
+});
+function update(){
+ const total=values.reduce((a,b)=>a+b,0);
+ document.getElementById("total").textContent=fmt(total);
+ document.getElementById("remaining").textContent=fmt(1000000-total);
+ const status=document.getElementById("status");
+ status.textContent=total>1000000?"Over budget":total===1000000?"Full budget allocated":"Within budget";
+ status.className="status"+(total>1000000?" over":"");
+ values.forEach((v,i)=>document.getElementById("amount"+i).textContent=fmt(v));
+}
+document.getElementById("reset").addEventListener("click",()=>{values.fill(0);values.forEach((v,i)=>document.getElementById("slider"+i).value=v);update();document.getElementById("message").textContent="Allocations reset.";});
+document.getElementById("equal").addEventListener("click",()=>{values.fill(150000); values.forEach((v,i)=>document.getElementById("slider"+i).value=v); update();document.getElementById("message").textContent="Each intervention is set to $150,000. Adjust to fit your team's priorities.";});
+document.getElementById("summary").addEventListener("click",async()=>{
+ const text="MSCS Teacher Retention Challenge — team allocation\n"+interventions.map((x,i)=>`${x.name}: ${fmt(values[i])}`).join("\n")+"\nTotal: "+fmt(values.reduce((a,b)=>a+b,0))+"\nRemaining: "+fmt(1000000-values.reduce((a,b)=>a+b,0));
+ const msg=document.getElementById("message");
+ try { await navigator.clipboard.writeText(text); msg.textContent="Allocation copied. Paste it into your notes or class discussion."; }
+ catch(e) { msg.textContent=text; }
+});
+update();
+</script>
+</body>
+</html>
